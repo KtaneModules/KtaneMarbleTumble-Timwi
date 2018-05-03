@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{C5F3714F-DBB6-0577-E694-44A9E0BB5A81}</ProjectGuid>
+    <ProjectGuid>{636C9237-5507-0E18-331C-5B9F7D33006B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AssemblyName>Assembly-CSharp-Editor</AssemblyName>
     <FileAlignment>512</FileAlignment>
@@ -123,9 +123,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="TumbleLock.csproj">
-      <Project>{E724092C-7803-F367-69DD-5BDF00DA44BB}</Project>
-      <Name>TumbleLock</Name>
+    <ProjectReference Include="MarbleTumble.csproj">
+      <Project>{E5094887-4C47-2EDF-720A-9EC9FA78D7F8}</Project>
+      <Name>MarbleTumble</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
