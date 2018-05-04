@@ -219,10 +219,10 @@ public class MarbleTumbleModule : MonoBehaviour
             if (_queue != null)
                 _queue.Enqueue(new Exit());
         };
-        Selectable.OnInteract += click;
+        Selectable.OnInteract += delegate { click(); return false; };
     }
 
-    private void enqueueRotations(Action action)
+    private bool? enqueueRotations(Action action)
     {
         var prevRotations = _rotations.ToArray();
         action();
@@ -244,13 +244,17 @@ public class MarbleTumbleModule : MonoBehaviour
                 _queue.Enqueue(MarbleInto.Trap(orig, _marbleDist - 1, rotation4 == 0 ? null : new RotationInfo(4, _rotations[4], _rotations[4] + rotation4)));
                 _rotations[4] += rotation4;
                 _marbleDist = 5;
+                return false;
             }
             else if (_marbleDist != orig)
             {
                 _queue.Enqueue(MarbleInto.Gap(orig, _marbleDist));
                 Debug.LogFormat(@"[Marble Tumble #{0}] Marble falls into gap at level {1}.{2}", _moduleId, _marbleDist, _marbleDist == 0 ? " Module solved." : null);
+                if (_marbleDist == 0)
+                    return true;
             }
         }
+        return null;
     }
 
     private int gap(int ix)
@@ -286,17 +290,80 @@ public class MarbleTumbleModule : MonoBehaviour
         }
     }
 
-    private bool click()
+    private bool? click()
     {
         if (_queue == null)
-            return false;
-        enqueueRotations(() =>
+            return null;
+        return enqueueRotations(() =>
         {
             var sec = ((int) Bomb.GetTime()) % 10;
             Debug.LogFormat(@"[Marble Tumble #{0}] Clicked when last seconds digit was: {1}", _moduleId, sec);
             for (int i = 0; i < 5; i++)
                 _rotations[i] += _rotationData[sec][_colorIxs[i]];
         });
-        return false;
+    }
+
+#pragma warning disable 414
+    private string TwitchHelpMessage = @"Use “!{0} 2/5” or “!{0} press 2/5” to press the module when the last digit in the timer is either 2 or 5. Use “!{0} 2/5 2”/“!{0} press 2/5 2” to press it twice. (Any amount is fine, but will only be pressed until the timer changes.)";
+#pragma warning restore 414
+
+    private int[] tryParse(string str)
+    {
+        var pieces = str.Split('/');
+        var ints = new int[pieces.Length];
+        for (int i = 0; i < pieces.Length; i++)
+            if (!int.TryParse(pieces[i], out ints[i]))
+                return null;
+        return ints;
+    }
+
+    private IEnumerator ProcessTwitchCommand(string command)
+    {
+        var pieces = command.ToLowerInvariant().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        int amount = 1;
+        int[] vals;
+
+        if ((pieces.Length == 2 && pieces[0] == "press" && (vals = tryParse(pieces[1])) != null) || (pieces.Length == 1 && (vals = tryParse(pieces[1])) != null) ||
+            (pieces.Length == 3 && pieces[0] == "press" && (vals = tryParse(pieces[1])) != null && int.TryParse(pieces[2], out amount)) || (pieces.Length == 2 && (vals = tryParse(pieces[1])) != null && int.TryParse(pieces[1], out amount)))
+        {
+            if (vals.Any(v => v < 0 || v > 9))
+            {
+                yield return "sendtochaterror Last seconds digit must be 0–9.";
+                yield break;
+            }
+            if (amount < 0)
+            {
+                yield return "sendtochaterror Negative amounts? I’m not even going to dignify that with an error message.";
+                yield break;
+            }
+
+            yield return null;
+            if (amount < 1)
+                yield break;
+            yield return new WaitUntil(() => vals.Contains(((int) Bomb.GetTime()) % 10));
+            var val = ((int) Bomb.GetTime()) % 10;
+            if (!vals.Contains(val))    // should never happen, but just to be sure
+                yield break;
+            for (int i = 0; i < amount; i++)
+            {
+                if (((int) Bomb.GetTime()) % 10 != val)     // stop if the desired second has passed
+                    yield break;
+
+                var result = click();
+                if (result == true)
+                {
+                    yield return "solve";
+                    yield break;
+                }
+                else if (result == false)
+                {
+                    yield return "strike";
+                    yield break;
+                }
+
+                yield return new WaitForSeconds(.1f);
+            }
+        }
     }
 }
