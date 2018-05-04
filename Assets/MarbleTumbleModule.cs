@@ -138,7 +138,6 @@ public class MarbleTumbleModule : MonoBehaviour
         private IEnumerable<object> marbleReset(MarbleTumbleModule m)
         {
             var orig1rot = m.MarbleLayer1.transform.localRotation;
-            var orig1y = m.MarbleLayer1.transform.localPosition.y;
             var orig2x = m.MarbleLayer2.transform.localPosition.x;
             var orig2rot = m.MarbleLayer2.transform.localRotation;
             var orig3rot = m.MarbleLayer3.transform.localRotation;
@@ -180,7 +179,7 @@ public class MarbleTumbleModule : MonoBehaviour
 
     private void SetMarblePos(float pos, float height = 0)
     {
-        MarbleLayer1.transform.localPosition = new Vector3(0, -0.0196f - .022f * pos / .058f + height, 0);
+        MarbleLayer1.transform.localPosition = new Vector3(0, -.0216f + .012f * (pos / (-.058f) + 1) + height, 0);
         MarbleLayer2.transform.localPosition = new Vector3(pos, 0, 0);
     }
 
