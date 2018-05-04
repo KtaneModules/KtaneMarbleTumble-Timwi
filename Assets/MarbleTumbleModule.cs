@@ -2,12 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using TumbleLock;
+using MarbleTumble;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
 
 /// <summary>
-/// On the Subject of Tumble Lock
+/// On the Subject of Marble Tumble
 /// Created by Timwi
 /// </summary>
 public class MarbleTumbleModule : MonoBehaviour
@@ -20,8 +20,8 @@ public class MarbleTumbleModule : MonoBehaviour
     public Mesh[] Meshes;
     public Texture[] Textures;
     public KMSelectable Selectable;
-    public GameObject MarbleLayer1; // layer used for rotation to match the rotation of the cylinder it’s in
-    public GameObject MarbleLayer2; // layer used to “roll” the marble
+    public GameObject MarbleLayer1; // layer used to match the rotation of the cylinder it’s in (rot Y)
+    public GameObject MarbleLayer2; // layer used to move (pos X) and “roll” (rot -Z) the marble
     public GameObject MarbleLayer3; // layer used to rotate the marble about its center randomly
 
     private static int _moduleIdCounter = 1;
@@ -38,57 +38,151 @@ public class MarbleTumbleModule : MonoBehaviour
     private int[] _colorIxs;
     private int[] _rotations;
     private int _marbleDist;
+    private Queue<Anim> _queue = new Queue<Anim>();
 
     private sealed class RotationInfo
     {
-        public int CylinderIndex;
-        public int RotateFrom;
-        public int RotateTo;
+        public int CylinderIndex { get; private set; }
+        public int RotateFrom { get; private set; }
+        public int RotateTo { get; private set; }
+        public RotationInfo(int cylinderIx, int rotFrom, int rotTo) { CylinderIndex = cylinderIx; RotateFrom = rotFrom; RotateTo = rotTo; }
     }
     private abstract class Anim
     {
         public abstract IEnumerable<object> RunAnimation(MarbleTumbleModule m);
-    }
-    private sealed class RotationAnim : Anim
-    {
-        public RotationInfo[] Rotations;
-
-        public override IEnumerable<object> RunAnimation(MarbleTumbleModule m)
+        protected IEnumerable<object> animate(int cylinder, int marble, int from, int to, MarbleTumbleModule m, float delay = 0)
         {
+            while (delay > 0)
+            {
+                yield return null;
+                delay -= Time.deltaTime;
+            }
+
+            const float duration = .1f;
             var elapsed = 0f;
-            var duration = .1f;
-            var fromAngles = Rotations.Select(inf => (360 / _numNotches) * inf.RotateFrom).ToArray();
-            var toAngles = Rotations.Select(inf => (360 / _numNotches) * inf.RotateTo).ToArray();
+            var fromAngle = (360 / _numNotches) * from;
+            var toAngle = (360 / _numNotches) * to;
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                for (int i = 0; i < 5; i++)
-                    m.Cylinders[i].transform.localEulerAngles = new Vector3(0, easeOutSine(Mathf.Min(duration, elapsed), duration, fromAngles[i], toAngles[i]), 0);
+                var ang = Quaternion.Euler(0, easeOutSine(Mathf.Min(duration, elapsed), duration, fromAngle, toAngle), 0);
+                m.Cylinders[cylinder].transform.localRotation = ang;
+                if (cylinder == marble)
+                    m.MarbleLayer1.transform.localRotation = ang;
                 yield return null;
             }
         }
     }
-    private sealed class MarbleIntoGap : Anim
+    private sealed class RotationAnim : Anim
     {
-        public int IntoIndex;
+        public RotationInfo[] Rotations { get; private set; }
+        public int Marble { get; private set; }
+        public RotationAnim(RotationInfo[] rot, int marble) { Rotations = rot; Marble = marble; }
 
         public override IEnumerable<object> RunAnimation(MarbleTumbleModule m)
         {
-            yield break;
+            var coroutines = Rotations.Select(rot => animate(rot.CylinderIndex, Marble, rot.RotateFrom, rot.RotateTo, m).GetEnumerator()).ToArray();
+            var any = true;
+            while (any)
+            {
+                yield return null;
+                any = false;
+                for (int i = 0; i < coroutines.Length; i++)
+                    any |= coroutines[i].MoveNext();
+            }
         }
     }
-    private sealed class MarbleIntoTrap : Anim
+    private sealed class MarbleInto : Anim
     {
-        public int IntoIndex;
+        public int FromIndex { get; private set; }
+        public int IntoIndex { get; private set; }
+        public bool IsGap { get; private set; }
+        public RotationInfo Rotation4 { get; private set; }
+        private MarbleInto(int fromIx, int intoIx, bool gap, RotationInfo rotation4) { FromIndex = fromIx; IntoIndex = intoIx; IsGap = gap; Rotation4 = rotation4; }
+        public static MarbleInto Gap(int fromIx, int intoIx) { return new MarbleInto(fromIx, intoIx, true, null); }
+        public static MarbleInto Trap(int fromIx, int intoIx, RotationInfo rotation4) { return new MarbleInto(fromIx, intoIx, false, rotation4); }
 
         public override IEnumerable<object> RunAnimation(MarbleTumbleModule m)
         {
+            var elapsed = 0f;
+            var duration = .2f * (FromIndex - IntoIndex);
+            var origRoll = m.MarbleLayer2.transform.localEulerAngles.z;
+            var fromX = m.MarbleLayer2.transform.localPosition.x;
+            var toX = IsGap ? (IntoIndex == 0 ? .002f : -.01f * (IntoIndex + .5f) - .003f) : -.01f * (IntoIndex + 1) - .0004f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var movement = easeInQuad(Mathf.Min(duration, elapsed), duration, 0, toX - fromX);
+                m.SetMarblePos(movement + fromX);
+                m.MarbleLayer2.transform.localEulerAngles = new Vector3(0, 0, origRoll - movement / .003f / Mathf.PI * 180);
+                yield return null;
+            }
+            if (IntoIndex == 0 && IsGap)
+                m.Module.HandlePass();
+            else if (!IsGap)
+            {
+                m.Module.HandleStrike();
+
+                var coroutines = (Rotation4 != null ? new[] { animate(4, -1, Rotation4.RotateFrom, Rotation4.RotateTo, m, .8f), marbleReset(m) } : new[] { marbleReset(m) }).Select(e => e.GetEnumerator()).ToArray();
+                var any = true;
+                while (any)
+                {
+                    yield return null;
+                    any = false;
+                    for (int i = 0; i < coroutines.Length; i++)
+                        any |= coroutines[i].MoveNext();
+                }
+            }
+        }
+
+        private IEnumerable<object> marbleReset(MarbleTumbleModule m)
+        {
+            var orig1rot = m.MarbleLayer1.transform.localRotation;
+            var orig1y = m.MarbleLayer1.transform.localPosition.y;
+            var orig2x = m.MarbleLayer2.transform.localPosition.x;
+            var orig2rot = m.MarbleLayer2.transform.localRotation;
+            var orig3rot = m.MarbleLayer3.transform.localRotation;
+            var newRandomRot = Quaternion.Euler(Rnd.Range(0, 360), Rnd.Range(0, 360), Rnd.Range(0, 360));
+
+            float duration = 1f;
+            float elapsed = 0;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Min(duration, elapsed) / duration;
+
+                m.MarbleLayer1.transform.localRotation = Quaternion.Slerp(orig1rot, Quaternion.identity, t);
+                m.SetMarblePos(easeOutSine(t, 1, orig2x, -.062f), t * (1 - t) * .1f);
+                m.MarbleLayer2.transform.localRotation = Quaternion.Slerp(orig2rot, Quaternion.identity, t);
+                m.MarbleLayer3.transform.localRotation = Quaternion.Slerp(orig3rot, newRandomRot, t);
+                yield return null;
+            }
+
+            duration = .1f;
+            elapsed = 0;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                m.SetMarblePos(easeInQuad(Mathf.Min(duration, elapsed), duration, -.062f, -.058f));
+                yield return null;
+            }
+        }
+    }
+    private sealed class Exit : Anim
+    {
+        public override IEnumerable<object> RunAnimation(MarbleTumbleModule m)
+        {
+            m._queue = null;
             yield break;
         }
     }
 
-    private Queue<Anim> _queue = new Queue<Anim>();
-    private Coroutine _rotateCoroutine;
+    private void SetMarblePos(float pos, float height = 0)
+    {
+        MarbleLayer1.transform.localPosition = new Vector3(0, -0.0196f - .022f * pos / .058f + height, 0);
+        MarbleLayer2.transform.localPosition = new Vector3(pos, 0, 0);
+    }
 
     void Start()
     {
@@ -96,7 +190,7 @@ public class MarbleTumbleModule : MonoBehaviour
         _colorIxs = Enumerable.Range(0, 5).ToArray().Shuffle();
         _rotations = new int[5];
         _traps = new int[5];
-        _marbleDist = 6;
+        _marbleDist = 5;
 
         enqueueRotations(() =>
         {
@@ -114,28 +208,49 @@ public class MarbleTumbleModule : MonoBehaviour
                 mat.color = _colors[_colorIxs[i]];
                 mat.mainTexture = Textures[textureIxs[i]];
             }
+
+            Debug.LogFormat(@"[Marble Tumble #{0}] Colors: {1}", _moduleId, _colorIxs.JoinString(", "));
+            Debug.LogFormat(@"[Marble Tumble #{0}] Traps: {1}", _moduleId, _traps.JoinString(", "));
         });
         MarbleLayer3.transform.localEulerAngles = new Vector3(Rnd.Range(0, 360), Rnd.Range(0, 360), Rnd.Range(0, 360));
 
-        _rotateCoroutine = StartCoroutine(rotate());
-        Bomb.OnBombExploded += delegate { StopCoroutine(_rotateCoroutine); };
+        StartCoroutine(rotate());
+        Bomb.OnBombExploded += delegate
+        {
+            if (_queue != null)
+                _queue.Enqueue(new Exit());
+        };
         Selectable.OnInteract += click;
     }
 
     private void enqueueRotations(Action action)
     {
-        var infs = Enumerable.Range(0, 5).Select(i => new RotationInfo { CylinderIndex = i, RotateFrom = _rotations[i] }).ToArray();
+        var prevRotations = _rotations.ToArray();
         action();
-        for (int i = 0; i < 5; i++)
-            infs[i].RotateTo = _rotations[i];
-        _queue.Enqueue(new RotationAnim { Rotations = infs });
+        Debug.LogFormat(@"[Marble Tumble #{0}] Rotations: {1}", _moduleId, _rotations.JoinString(", "));
+        _queue.Enqueue(new RotationAnim(prevRotations.Select((prev, ix) => new RotationInfo(ix, prev, _rotations[ix])).ToArray(), _marbleDist));
         if (_marbleDist > 0)
         {
-            var marblePos = _marbleDist == 6 ? 0 : gap(_marbleDist);
-            if (gap(_marbleDist - 1) == marblePos)
-                _queue.Enqueue(new MarbleIntoGap { IntoIndex = _marbleDist - 1 });
-            else if (trap(_marbleDist - 1) == marblePos)
-                _queue.Enqueue(new MarbleIntoTrap { IntoIndex = _marbleDist - 1 });
+            var marblePos = _marbleDist == 5 ? 0 : gap(_marbleDist);
+            var orig = _marbleDist;
+            while (_marbleDist > 0 && gap(_marbleDist - 1) == marblePos)
+                _marbleDist--;
+
+            if (_marbleDist > 0 && trap(_marbleDist - 1) == marblePos)
+            {
+                Debug.LogFormat(@"[Marble Tumble #{0}] Marble falls into trap at level {1}. Strike!", _moduleId, _marbleDist - 1);
+                int rotation4 =
+                    (gap(4) == 0 && trap(4) == 1) || (trap(4) == 0 && gap(4) == 1) ? 1 :
+                    (gap(4) == 0 || trap(4) == 0) ? -1 : 0;
+                _queue.Enqueue(MarbleInto.Trap(orig, _marbleDist - 1, rotation4 == 0 ? null : new RotationInfo(4, _rotations[4], _rotations[4] + rotation4)));
+                _rotations[4] += rotation4;
+                _marbleDist = 5;
+            }
+            else if (_marbleDist != orig)
+            {
+                _queue.Enqueue(MarbleInto.Gap(orig, _marbleDist));
+                Debug.LogFormat(@"[Marble Tumble #{0}] Marble falls into gap at level {1}.{2}", _moduleId, _marbleDist, _marbleDist == 0 ? " Module solved." : null);
+            }
         }
     }
 
@@ -153,10 +268,15 @@ public class MarbleTumbleModule : MonoBehaviour
     {
         return (to - from) * Mathf.Sin(time / duration * (Mathf.PI / 2)) + from;
     }
+    private static float easeInQuad(float time, float duration, float from, float to)
+    {
+        time /= duration;
+        return (to - from) * time * time + from;
+    }
 
     private IEnumerator rotate()
     {
-        while (true)
+        while (_queue != null)
         {
             while (_queue.Count == 0)
                 yield return null;
@@ -169,10 +289,12 @@ public class MarbleTumbleModule : MonoBehaviour
 
     private bool click()
     {
+        if (_queue == null)
+            return false;
         enqueueRotations(() =>
         {
             var sec = ((int) Bomb.GetTime()) % 10;
-            Debug.LogFormat("[Tumble Lock #{0}] You clicked at {1}.", _moduleId, sec);
+            Debug.LogFormat(@"[Marble Tumble #{0}] Clicked when last seconds digit was: {1}", _moduleId, sec);
             for (int i = 0; i < 5; i++)
                 _rotations[i] += _rotationData[sec][_colorIxs[i]];
         });

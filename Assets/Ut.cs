@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using Rnd = UnityEngine.Random;
 
-namespace TumbleLock
+namespace MarbleTumble
 {
     static class Ut
     {
