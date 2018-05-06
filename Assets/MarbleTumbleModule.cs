@@ -104,6 +104,7 @@ public class MarbleTumbleModule : MonoBehaviour
 
         public override IEnumerable<object> RunAnimation(MarbleTumbleModule m)
         {
+            m.Audio.PlaySoundAtTransform("Marble" + (2 * (FromIndex - IntoIndex)), m.transform);
             var elapsed = 0f;
             var duration = .2f * (FromIndex - IntoIndex);
             var origRoll = m.MarbleLayer2.transform.localEulerAngles.z;
@@ -118,7 +119,10 @@ public class MarbleTumbleModule : MonoBehaviour
                 yield return null;
             }
             if (IntoIndex == 0 && IsGap)
+            {
+                m.Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, m.transform);
                 m.Module.HandlePass();
+            }
             else if (!IsGap)
             {
                 m.Module.HandleStrike();
