@@ -370,4 +370,14 @@ public class MarbleTumbleModule : MonoBehaviour
             }
         }
     }
+
+    void TwitchHandleForcedSolve()
+    {
+        if (_marbleDist == 0 || _queue == null)
+            return; // already solved or bomb blew up
+
+        var target = _marbleDist == 5 ? 0 : _rotations[_marbleDist];
+        _queue.Enqueue(new RotationAnim(Enumerable.Range(0, _marbleDist).Select(i => new RotationInfo(i, _rotations[i], (_rotations[i] / 10) * 10 + target)).ToArray(), _marbleDist));
+        _queue.Enqueue(MarbleInto.Gap(_marbleDist, 0));
+    }
 }
