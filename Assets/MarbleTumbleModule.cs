@@ -328,8 +328,8 @@ public class MarbleTumbleModule : MonoBehaviour
         int amount = 1;
         int[] vals;
 
-        if ((pieces.Length == 2 && pieces[0] == "press" && (vals = tryParse(pieces[1])) != null) || (pieces.Length == 1 && (vals = tryParse(pieces[1])) != null) ||
-            (pieces.Length == 3 && pieces[0] == "press" && (vals = tryParse(pieces[1])) != null && int.TryParse(pieces[2], out amount)) || (pieces.Length == 2 && (vals = tryParse(pieces[1])) != null && int.TryParse(pieces[1], out amount)))
+        if ((pieces.Length == 2 && pieces[0] == "press" && (vals = tryParse(pieces[1])) != null) || (pieces.Length == 1 && (vals = tryParse(pieces[0])) != null) ||
+            (pieces.Length == 3 && pieces[0] == "press" && (vals = tryParse(pieces[1])) != null && int.TryParse(pieces[2], out amount)) || (pieces.Length == 2 && (vals = tryParse(pieces[0])) != null && int.TryParse(pieces[1], out amount)))
         {
             if (vals.Any(v => v < 0 || v > 9))
             {
