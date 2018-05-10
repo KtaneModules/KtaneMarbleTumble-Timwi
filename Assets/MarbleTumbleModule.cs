@@ -212,7 +212,8 @@ public class MarbleTumbleModule : MonoBehaviour
                 mat.mainTexture = Textures[textureIxs[i]];
             }
 
-            Debug.LogFormat(@"[Marble Tumble #{0}] Colors: {1}", _moduleId, _colorIxs.JoinString(", "));
+            var colorNames = "red,yellow,green,blue,silver".Split(',');
+            Debug.LogFormat(@"[Marble Tumble #{0}] Colors: {1}", _moduleId, _colorIxs.Select(ix => colorNames[ix]).JoinString(", "));
             Debug.LogFormat(@"[Marble Tumble #{0}] Traps: {1}", _moduleId, _traps.JoinString(", "));
         });
         MarbleLayer3.transform.localEulerAngles = new Vector3(Rnd.Range(0, 360), Rnd.Range(0, 360), Rnd.Range(0, 360));
@@ -248,6 +249,8 @@ public class MarbleTumbleModule : MonoBehaviour
                 _queue.Enqueue(MarbleInto.Trap(orig, _marbleDist - 1, rotation4 == 0 ? null : new RotationInfo(4, _rotations[4], _rotations[4] + rotation4)));
                 _rotations[4] += rotation4;
                 _marbleDist = 5;
+                if (rotation4 != 0)
+                    Debug.LogFormat(@"[Marble Tumble #{0}] Rotations after strike: {1}", _moduleId, _rotations.JoinString(", "));
                 return false;
             }
             else if (_marbleDist != orig)
