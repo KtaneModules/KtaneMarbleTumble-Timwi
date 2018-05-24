@@ -40,6 +40,9 @@ public class MarbleTumbleModule : MonoBehaviour
     private int _marbleDist;
     private Queue<Anim> _queue = new Queue<Anim>();
 
+    // Used to ignore clicks when the module awards a strike until after the animation for that is completed.
+    private bool _ignoreClicks;
+
     private sealed class RotationInfo
     {
         public int CylinderIndex { get; private set; }
@@ -136,6 +139,7 @@ public class MarbleTumbleModule : MonoBehaviour
                     for (int i = 0; i < coroutines.Length; i++)
                         any |= coroutines[i].MoveNext();
                 }
+                m._ignoreClicks = false;
             }
         }
 
@@ -251,6 +255,7 @@ public class MarbleTumbleModule : MonoBehaviour
                 _marbleDist = 5;
                 if (rotation4 != 0)
                     Debug.LogFormat(@"[Marble Tumble #{0}] Rotations after strike: {1}", _moduleId, _rotations.JoinString(", "));
+                _ignoreClicks = true;
                 return false;
             }
             else if (_marbleDist != orig)
@@ -299,7 +304,7 @@ public class MarbleTumbleModule : MonoBehaviour
 
     private bool? click()
     {
-        if (_queue == null)
+        if (_queue == null || _ignoreClicks)
             return null;
         return enqueueRotations(() =>
         {
