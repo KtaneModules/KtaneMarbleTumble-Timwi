@@ -8,10 +8,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5cf2299c8864afe4ab42466f546ae20d, type: 3}
-  m_Name: WorkshopItem
-  m_EditorClassIdentifier:
-  WorkshopPublishedFileID: 1377269180
-  Title: Marble Tumble
-  Tags:
-  - Regular Module
+  m_Script: {fileID: 11500000, guid: 34a4fefeeafb9a5439cfbd83306ba467, type: 3}
+  m_Name: Default
+  m_EditorClassIdentifier: 
+  SerialNumberType: 0
+  CustomSerialNumber: 
+  Widgets: []
