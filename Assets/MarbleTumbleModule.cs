@@ -19,6 +19,7 @@ public class MarbleTumbleModule : MonoBehaviour
     public GameObject[] Cylinders;
     public Mesh[] Meshes;
     public Texture[] Textures;
+    public TextMesh[] ColorblindIndicators;
     public KMSelectable Selectable;
     public GameObject MarbleLayer1; // layer used to match the rotation of the cylinder it’s in (rot Y)
     public GameObject MarbleLayer2; // layer used to move (pos X) and “roll” (rot -Z) the marble
@@ -28,11 +29,11 @@ public class MarbleTumbleModule : MonoBehaviour
     private int _moduleId;
 
     // Red, yellow, green, blue, silver
-    private static Color[] _colors = "FF8181,EFF09A,81D682,8EB5FF,FFFFFF".Split(',').Select(str => new Color(Convert.ToInt32(str.Substring(0, 2), 16) / 255f, Convert.ToInt32(str.Substring(2, 2), 16) / 255f, Convert.ToInt32(str.Substring(4, 2), 16) / 255f)).ToArray();
-    private static int _numNotches = 10;
-    private static int[] _notchMins = new[] { 3, 2, 1, 1, 1 };
-    private static int[] _notchMaxs = new[] { 7, 8, 9, 9, 9 };
-    private static int[][] _rotationData = @"-1,1,-2,0,2;-2,1,2,-1,0;1,0,2,-2,-1;0,-1,-2,1,2;2,0,1,-1,-2;1,-2,-1,2,0;-2,2,0,1,-1;0,-1,1,2,-2;-1,2,0,-2,1;2,-2,-1,0,1".Split(';').Select(str => str.Split(',').Select(s => int.Parse(s)).ToArray()).ToArray();
+    private static readonly Color[] _colors = "FF8181,EFF09A,81D682,8EB5FF,FFFFFF".Split(',').Select(str => new Color(Convert.ToInt32(str.Substring(0, 2), 16) / 255f, Convert.ToInt32(str.Substring(2, 2), 16) / 255f, Convert.ToInt32(str.Substring(4, 2), 16) / 255f)).ToArray();
+    private static readonly int _numNotches = 10;
+    private static readonly int[] _notchMins = new[] { 3, 2, 1, 1, 1 };
+    private static readonly int[] _notchMaxs = new[] { 7, 8, 9, 9, 9 };
+    private static readonly int[][] _rotationData = @"-1,1,-2,0,2;-2,1,2,-1,0;1,0,2,-2,-1;0,-1,-2,1,2;2,0,1,-1,-2;1,-2,-1,2,0;-2,2,0,1,-1;0,-1,1,2,-2;-1,2,0,-2,1;2,-2,-1,0,1".Split(';').Select(str => str.Split(',').Select(s => int.Parse(s)).ToArray()).ToArray();
 
     private int[] _traps;
     private int[] _colorIxs;
@@ -229,6 +230,21 @@ public class MarbleTumbleModule : MonoBehaviour
                 _queue.Enqueue(new Exit());
         };
         Selectable.OnInteract += delegate { click(); return false; };
+
+        if (GetComponent<KMColorblindMode>().ColorblindModeActive)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                ColorblindIndicators[i].gameObject.SetActive(true);
+                ColorblindIndicators[i].text = "RYGBS".Substring(_colorIxs[i], 1);
+                if (_traps[i] < 5)
+                {
+                    var y = ColorblindIndicators[i].transform.localPosition.y;
+                    ColorblindIndicators[i].transform.localPosition = new Vector3(0, y, -i - 1);
+                    ColorblindIndicators[i].transform.localEulerAngles = new Vector3(-90, 180, 0);
+                }
+            }
+        }
     }
 
     private bool? enqueueRotations(Action action)
