@@ -13,14 +13,12 @@
     <TargetFrameworkIdentifier>.NETFramework</TargetFrameworkIdentifier>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <TargetFrameworkProfile>Unity Subset v3.5</TargetFrameworkProfile>
-    <CompilerResponseFile>
-    </CompilerResponseFile>
+    <CompilerResponseFile></CompilerResponseFile>
     <UnityProjectGenerator>VSTU</UnityProjectGenerator>
     <UnityProjectType>Game:1</UnityProjectType>
     <UnityBuildTarget>StandaloneWindows:5</UnityBuildTarget>
     <UnityVersion>2017.1.0f3</UnityVersion>
-    <RootNamespace>
-    </RootNamespace>
+    <RootNamespace></RootNamespace>
     <LangVersion>4</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -87,8 +85,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\KMBombInfoExtensions.cs" />
-    <Compile Include="Assets\KMColorblindMode.cs" />
+    <Compile Include="Assets\KMScripts\KMBombInfoExtensions.cs" />
+    <Compile Include="Assets\KMScripts\KMColorblindMode.cs" />
     <Compile Include="Assets\MarbleTumbleModule.cs" />
     <Compile Include="Assets\TestHarness\EdgeworkConfiguration.cs" />
     <Compile Include="Assets\TestHarness\TestHarness.cs" />
