@@ -231,19 +231,17 @@ public class MarbleTumbleModule : MonoBehaviour
         };
         Selectable.OnInteract += delegate { click(); return false; };
 
-        if (GetComponent<KMColorblindMode>().ColorblindModeActive)
+        var colorblind = GetComponent<KMColorblindMode>().ColorblindModeActive;
+        for (int i = 0; i < 5; i++)
         {
-            for (int i = 0; i < 5; i++)
+            ColorblindIndicators[i].text = "RYGBS".Substring(_colorIxs[i], 1);
+            if (_traps[i] < 5)
             {
-                ColorblindIndicators[i].gameObject.SetActive(true);
-                ColorblindIndicators[i].text = "RYGBS".Substring(_colorIxs[i], 1);
-                if (_traps[i] < 5)
-                {
-                    var y = ColorblindIndicators[i].transform.localPosition.y;
-                    ColorblindIndicators[i].transform.localPosition = new Vector3(0, y, -i - 1);
-                    ColorblindIndicators[i].transform.localEulerAngles = new Vector3(-90, 180, 0);
-                }
+                var y = ColorblindIndicators[i].transform.localPosition.y;
+                ColorblindIndicators[i].transform.localPosition = new Vector3(0, y, -i - 1);
+                ColorblindIndicators[i].transform.localEulerAngles = new Vector3(-90, 180, 0);
             }
+            ColorblindIndicators[i].gameObject.SetActive(colorblind);
         }
     }
 
@@ -332,7 +330,7 @@ public class MarbleTumbleModule : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private string TwitchHelpMessage = @"Use “!{0} 2/5” or “!{0} press 2/5” to press the module when the last digit in the timer is either 2 or 5. Use “!{0} 2/5 2”/“!{0} press 2/5 2” to press it twice. (Any amount is fine, but will only be pressed until the timer changes.)";
+    private readonly string TwitchHelpMessage = @"Use “!{0} 2/5” or “!{0} press 2/5” to press the module when the last digit in the timer is either 2 or 5. Use “!{0} 2/5 2”/“!{0} press 2/5 2” to press it twice. (Any amount is fine, but will only be pressed until the timer changes.) Use “!{0} colorblind” to show letters indicating the colors.";
 #pragma warning restore 414
 
     private int[] tryParse(string str)
@@ -348,6 +346,14 @@ public class MarbleTumbleModule : MonoBehaviour
     private IEnumerator ProcessTwitchCommand(string command)
     {
         var pieces = command.ToLowerInvariant().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (pieces.Length == 1 && pieces[0] == "colorblind")
+        {
+            yield return null;
+            for (int i = 0; i < 5; i++)
+                ColorblindIndicators[i].gameObject.SetActive(true);
+            yield break;
+        }
 
         int amount = 1;
         int[] vals;
