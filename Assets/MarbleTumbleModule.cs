@@ -239,7 +239,7 @@ public class MarbleTumbleModule : MonoBehaviour
             {
                 var y = ColorblindIndicators[i].transform.localPosition.y;
                 ColorblindIndicators[i].transform.localPosition = new Vector3(0, y, -i - 1);
-                ColorblindIndicators[i].transform.localEulerAngles = new Vector3(-90, 180, 0);
+                ColorblindIndicators[i].transform.localEulerAngles = new Vector3(90, 180, 0);
             }
             ColorblindIndicators[i].gameObject.SetActive(colorblind);
         }
