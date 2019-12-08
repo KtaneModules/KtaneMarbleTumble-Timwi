@@ -69,7 +69,7 @@ public class MarbleTumbleModule : MonoBehaviour
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                var ang = Quaternion.Euler(0, easeOutSine(Mathf.Min(duration, elapsed), duration, fromAngle, toAngle), 0);
+                var ang = Quaternion.Euler(0, Easing.OutSine(Mathf.Min(duration, elapsed), fromAngle, toAngle, duration), 0);
                 m.Cylinders[cylinder].transform.localRotation = ang;
                 if (cylinder == marble)
                     m.MarbleLayer1.transform.localRotation = ang;
@@ -117,7 +117,7 @@ public class MarbleTumbleModule : MonoBehaviour
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                var movement = easeInQuad(Mathf.Min(duration, elapsed), duration, 0, toX - fromX);
+                var movement = Easing.InQuad(Mathf.Min(duration, elapsed), 0, toX - fromX, duration);
                 m.SetMarblePos(movement + fromX);
                 m.MarbleLayer2.transform.localEulerAngles = new Vector3(0, 0, origRoll - movement / .003f / Mathf.PI * 180);
                 yield return null;
@@ -161,7 +161,7 @@ public class MarbleTumbleModule : MonoBehaviour
                 var t = Mathf.Min(duration, elapsed) / duration;
 
                 m.MarbleLayer1.transform.localRotation = Quaternion.Slerp(orig1rot, Quaternion.identity, t);
-                m.SetMarblePos(easeOutSine(t, 1, orig2x, -.062f), t * (1 - t) * .1f);
+                m.SetMarblePos(Easing.OutSine(t, orig2x, -.062f, 1), t * (1 - t) * .1f);
                 m.MarbleLayer2.transform.localRotation = Quaternion.Slerp(orig2rot, Quaternion.identity, t);
                 m.MarbleLayer3.transform.localRotation = Quaternion.Slerp(orig3rot, newRandomRot, t);
                 yield return null;
@@ -172,7 +172,7 @@ public class MarbleTumbleModule : MonoBehaviour
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                m.SetMarblePos(easeInQuad(Mathf.Min(duration, elapsed), duration, -.062f, -.058f));
+                m.SetMarblePos(Easing.InQuad(Mathf.Min(duration, elapsed), -.062f, -.058f, duration));
                 yield return null;
             }
         }
@@ -291,16 +291,6 @@ public class MarbleTumbleModule : MonoBehaviour
     private int trap(int ix)
     {
         return ((_rotations[ix] + _traps[ix]) % _numNotches + _numNotches) % _numNotches;
-    }
-
-    private static float easeOutSine(float time, float duration, float from, float to)
-    {
-        return (to - from) * Mathf.Sin(time / duration * (Mathf.PI / 2)) + from;
-    }
-    private static float easeInQuad(float time, float duration, float from, float to)
-    {
-        time /= duration;
-        return (to - from) * time * time + from;
     }
 
     private IEnumerator rotate()
