@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using RT.Dijkstra;
 using System.Collections.Generic;
 using System.Linq;
 using MarbleTumble;
@@ -39,6 +40,7 @@ public class MarbleTumbleModule : MonoBehaviour
     private int[] _colorIxs;
     private int[] _rotations;
     private int _marbleDist;
+    private bool _isSolved;
     private Queue<Anim> _queue = new Queue<Anim>();
 
     // Used to ignore clicks when the module awards a strike until after the animation for that is completed.
@@ -126,6 +128,7 @@ public class MarbleTumbleModule : MonoBehaviour
             {
                 m.Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, m.transform);
                 m.Module.HandlePass();
+                m._isSolved = true;
             }
             else if (!IsGap)
             {
@@ -391,13 +394,22 @@ public class MarbleTumbleModule : MonoBehaviour
         }
     }
 
-    void TwitchHandleForcedSolve()
+    IEnumerator TwitchHandleForcedSolve()
     {
         if (_marbleDist == 0 || _queue == null)
-            return; // already solved or bomb blew up
+            yield break; // already solved or bomb blew up
 
-        var target = _marbleDist == 5 ? 0 : _rotations[_marbleDist];
-        _queue.Enqueue(new RotationAnim(Enumerable.Range(0, _marbleDist).Select(i => new RotationInfo(i, _rotations[i], (_rotations[i] / 10) * 10 + target)).ToArray(), _marbleDist));
-        _queue.Enqueue(MarbleInto.Gap(_marbleDist, 0));
+        int totalWeight;
+        var results = DijkstrasAlgorithm.Run(new DijNode(_rotations, _traps, _colorIxs, 5, -1), 0, (a, b) => a + b, out totalWeight);
+        foreach (var result in results)
+        {
+            while ((int) Bomb.GetTime() % 10 != result)
+                yield return true;
+            Selectable.OnInteract();
+            yield return new WaitForSeconds(.1f);
+        }
+
+        while (!_isSolved)
+            yield return true;
     }
 }
