@@ -42,6 +42,7 @@ public class MarbleTumbleModule : MonoBehaviour
     private int _marbleDist;
     private bool _isSolved;
     private Queue<Anim> _queue = new Queue<Anim>();
+    private bool _colorblind;
 
     // Used to ignore clicks when the module awards a strike until after the animation for that is completed.
     private bool _ignoreClicks;
@@ -234,7 +235,7 @@ public class MarbleTumbleModule : MonoBehaviour
         };
         Selectable.OnInteract += delegate { click(); return false; };
 
-        var colorblind = GetComponent<KMColorblindMode>().ColorblindModeActive;
+        _colorblind = GetComponent<KMColorblindMode>().ColorblindModeActive;
         for (int i = 0; i < 5; i++)
         {
             ColorblindIndicators[i].text = "RYGBS".Substring(_colorIxs[i], 1);
@@ -244,7 +245,7 @@ public class MarbleTumbleModule : MonoBehaviour
                 ColorblindIndicators[i].transform.localPosition = new Vector3(0, y, -i - 1);
                 ColorblindIndicators[i].transform.localEulerAngles = new Vector3(90, 180, 0);
             }
-            ColorblindIndicators[i].gameObject.SetActive(colorblind);
+            ColorblindIndicators[i].gameObject.SetActive(_colorblind);
         }
     }
 
@@ -323,7 +324,7 @@ public class MarbleTumbleModule : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"Use “!{0} 2/5” or “!{0} press 2/5” to press the module when the last digit in the timer is either 2 or 5. Use “!{0} 2/5 2”/“!{0} press 2/5 2” to press it twice. (Any amount is fine, but will only be pressed until the timer changes.) Use “!{0} colorblind” to show letters indicating the colors.";
+    private readonly string TwitchHelpMessage = @"!{0} 2/5 [press the module when the last digit in the timer is either 2 or 5] | !{0} 2/5 2 [press it twice (any amount is fine, but will only be pressed until the timer changes) | !{0} colorblind";
 #pragma warning restore 414
 
     private int[] tryParse(string str)
@@ -343,8 +344,9 @@ public class MarbleTumbleModule : MonoBehaviour
         if (pieces.Length == 1 && pieces[0] == "colorblind")
         {
             yield return null;
+            _colorblind = !_colorblind;
             for (int i = 0; i < 5; i++)
-                ColorblindIndicators[i].gameObject.SetActive(true);
+                ColorblindIndicators[i].gameObject.SetActive(_colorblind);
             yield break;
         }
 
